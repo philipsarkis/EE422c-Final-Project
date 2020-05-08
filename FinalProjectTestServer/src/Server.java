@@ -1,7 +1,10 @@
+import java.io.File;
 import java.net.ServerSocket;
+import com.google.gson.reflect.TypeToken;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Observable;
+import java.util.Scanner;
 
 import com.google.gson.Gson;
 
@@ -14,7 +17,16 @@ class Server extends Observable {
 
   private void runServer() {
     try {
-    	productList.add(new Product("Umbrella", 0.0, "No One Yet"));
+    	File f = new File("ProductList.txt");
+        Scanner scan = new Scanner(f);
+        while(scan.hasNextLine())
+        {
+            String string = scan.nextLine();
+            String[] inputs = new String[3];
+            inputs = string.split(",");
+            productList.add(new Product(inputs[0], Double.parseDouble(inputs[1]), Double.parseDouble(inputs[2]), Integer.parseInt(inputs[3])));
+            
+        }
       setUpNetworking();
     } catch (Exception e) {
       e.printStackTrace();
@@ -49,7 +61,6 @@ class Server extends Observable {
     				if(bid.amount > productList.get(i).bid) {
     					productList.get(i).setBid(bid.amount);
     					productList.get(i).setBidder(bid.bidderName);
-    					System.out.println(bid.bidderName);
     				}
     			}
     			j = productList;
@@ -65,8 +76,17 @@ class Server extends Observable {
     else {
     	try {
     		System.out.println("welcome, " + input);
+    		  
        		j = productList;
-    		output = gson.toJson(j);
+       		for(int i = 0; i < j.size(); i++) {
+  			  System.out.println(j.get(i).product);
+  			  System.out.println(j.get(i).bid);
+  			  System.out.println(j.get(i).highestBidder);
+  		  }
+       		
+       		j = productList;
+			output = gson.toJson(j);
+			
     		this.setChanged();
           	this.notifyObservers(output);
     	    } catch (Exception e) {

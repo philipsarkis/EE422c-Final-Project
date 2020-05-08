@@ -1,5 +1,6 @@
 
 import java.util.Scanner;
+import com.google.gson.reflect.TypeToken;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -13,6 +14,9 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
@@ -20,7 +24,10 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.RowConstraints;
@@ -30,13 +37,14 @@ import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
 public class Client extends Application{
-	private ArrayList<Product> clientProductList = new ArrayList<Product>();
+  private static ArrayList<Product> clientProductList = new ArrayList<Product>();
   private static String host = "127.0.0.1";
   private BufferedReader fromServer;
   private PrintWriter toServer;
   private Scanner consoleInput = new Scanner(System.in);
   private static String clientName;
   private int loginOK = 0;
+  TableView<Product> table;
 
 
   public static void main(String[] args) {
@@ -74,7 +82,7 @@ public class Client extends Application{
           String[] variables = input.split(",");
           Bid request = new Bid(variables[0], Double.valueOf(variables[1]));
           request.setName(clientName);
-          System.out.println(request);
+//          System.out.println(request);
           GsonBuilder builder = new GsonBuilder();
           Gson gson = builder.create();
           sendToServer(gson.toJson(request));
@@ -88,8 +96,9 @@ public class Client extends Application{
 
   protected void processRequest(String input) {
 	  Gson g = new Gson();
-	  clientProductList = g.fromJson(input, ArrayList.class);
-
+	  clientProductList = g.fromJson(input, new TypeToken<ArrayList<Product>>() {}.getType());
+	  
+	 // clientProductList.add(g.fromJson(input, Product.class));
   }
 
   protected void sendToServer(String string) {
@@ -100,7 +109,7 @@ public class Client extends Application{
   
   public void start(Stage primaryStage) {
 	  try {
-	      new Client().setUpNetworking();
+	      this.setUpNetworking();
 	      
 	    } catch (Exception e) {
 	      e.printStackTrace();
@@ -132,25 +141,99 @@ public class Client extends Application{
 		Scene loginScene = new Scene(loginWindow, 300, 200);
 		
 		Button logoutButton = new Button("Logout");
+		GridPane.setConstraints(logoutButton, 950, 425);
 		logoutButton.setOnAction(e -> window.setScene(loginScene));
+		
+		TextField bidInput = new TextField();
+		loginInput.setPromptText("Enter Bid Amount");
+		GridPane.setConstraints(bidInput, 1, 0);
+		
+		Button bidButton = new Button("Place Bid!");
+		GridPane.setConstraints(bidButton, 2, 0);
+		
+	
+		
+		
+		window.setScene(loginScene);
+		window.show();
 		
 		login.setOnAction(e -> {
 			String s = loginInput.getText();
 			GsonBuilder builder1 = new GsonBuilder();
 	        Gson gson1 = builder1.create();
-	        //sendToServer(gson1.toJson(s));
-	        System.out.println("Sending to server: " + gson1.toJson(s));
-	        toServer.println(gson1.toJson(s) + "\n");
-	        toServer.flush();
+	        sendToServer(gson1.toJson(s));
+	        try {
+				Thread.sleep(250);
+			} catch (InterruptedException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
 			clientName = s;
-			System.out.println(clientName);
+			//System.out.println(clientName);
+			//System.out.println(clientProductList.size());
+			ChoiceBox<String> choiceBox = new ChoiceBox<>();
+			for(int i = 0; i < clientProductList.size(); i++) {
+				choiceBox.getItems().add(clientProductList.get(i).product);
+			}
+			
+		//	for(int i = 0; i < clientProductList.size(); i++) {
+		//		  System.out.println(clientProductList.get(i).product);
+		//		  System.out.println(clientProductList.get(i).bid);
+		//		  System.out.println(clientProductList.get(i).highestBidder);
+		//	  }
+			
+			choiceBox.setValue(clientProductList.get(0).product);
+			GridPane.setConstraints(choiceBox, 0, 0);
 			
 			
-			//window.setScene(auctionScene);
+			
+			TableColumn<Product, String> productColumn = new TableColumn<>("Product");
+			productColumn.setMinWidth(200);
+			productColumn.setCellValueFactory(new PropertyValueFactory<>("product"));
+			
+			TableColumn<Product, Double> bidColumn = new TableColumn<>("Bid");
+			bidColumn.setMinWidth(100);
+			bidColumn.setCellValueFactory(new PropertyValueFactory<>("bid"));
+
+			TableColumn<Product, Double> bidderColumn = new TableColumn<>("Highest Bidder");
+			bidderColumn.setMinWidth(100);
+			bidderColumn.setCellValueFactory(new PropertyValueFactory<>("highestBidder"));
+			
+			TableColumn<Product, Double> buyNowColumn = new TableColumn<>("Buy It Now");
+			buyNowColumn.setMinWidth(100);
+			buyNowColumn.setCellValueFactory(new PropertyValueFactory<>("buyNow"));
+			
+			TableColumn<Product, Integer> timeColumn = new TableColumn<>("Time Remaining");
+			timeColumn.setMinWidth(100);
+			timeColumn.setCellValueFactory(new PropertyValueFactory<>("time"));
+			
+			table = new TableView<>();
+			Platform.runLater(() -> {
+				table.setItems(getProduct());			
+			});
+
+			table.getColumns().addAll(productColumn, bidColumn, bidderColumn, buyNowColumn, timeColumn);
+			GridPane.setConstraints(table, 15, 0);
+			
+			GridPane layout2 = new GridPane();
+			layout2.getChildren().addAll(logoutButton, choiceBox, bidInput, bidButton, table);
+			Scene auctionScene = new Scene(layout2, 1000, 500);
+			
+			bidButton.setOnAction(f -> {
+				String bp = choiceBox.getValue();
+				if(bidInput.getText() != null) {
+					Bid br = new Bid(bp, Double.parseDouble(bidInput.getText()));
+					br.setName(clientName);
+			         GsonBuilder builder2 = new GsonBuilder();
+			          Gson gson2 = builder2.create();
+			          sendToServer(gson2.toJson(br));
+				}
+			});
+	
+			
+			window.setScene(auctionScene);
 		});
-		
-		window.setScene(loginScene);
-		window.show();
+
 		
 		
 		
@@ -163,13 +246,15 @@ public class Client extends Application{
 		///StackPane layout2 = new StackPane();
 		//layout2.getChildren().addAll(logoutButton, choiceBox);
 		//Scene auctionScene = new Scene(layout2, 1000, 500);
-		
-
-		
-
-		
-		
-		
+	
+  }
+  
+  public ObservableList<Product> getProduct(){
+	  ObservableList<Product> productList = FXCollections.observableArrayList();
+	  for(int i = 0; i < clientProductList.size(); i++) {
+		  productList.add(clientProductList.get(i));
+	  }
+	  return productList;
   }
 
 
