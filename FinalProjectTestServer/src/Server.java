@@ -60,11 +60,20 @@ class Server extends Observable {
     			if(bid.item.equals(productList.get(i).product)) {
     				if(bid.amount > productList.get(i).bid) {
     					productList.get(i).setBid(bid.amount);
+    					productList.get(i).setBidHistory(bid);
     					productList.get(i).setBidder(bid.bidderName);
+    					productList.get(i).setBidBefore(true);
+    					if(bid.amount >= productList.get(i).buyNow) {
+        					productList.get(i).setSold(true);
+    					}
+    	    			j = productList;
+    	    			output = gson.toJson(j);
+    				}
+    				else {
+    					output = gson.toJson("Your bid is too low!");
     				}
     			}
-    			j = productList;
-    			output = gson.toJson(j);
+
     			
     	      }
     	      this.setChanged();

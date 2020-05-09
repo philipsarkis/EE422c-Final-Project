@@ -1,3 +1,6 @@
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
+
 class Bid {
   String item;
   Double amount;
@@ -10,6 +13,7 @@ class Bid {
   protected Bid(String input, Double number) {
     this.item = input;
     this.amount = number;
+    this.bidderName = "";
   }
   
   protected Bid(String input, Double number, String name) {
@@ -30,8 +34,11 @@ class Bid {
 	  return bidderName;
   }
   
+  public void setName(String name) {
+	  bidderName = name;
+  }
   
   public String toString() {
-	  return item + "'s current bid is at : $" + amount;
+	  return "bid of $" + amount + " by " + bidderName;
   }
 }

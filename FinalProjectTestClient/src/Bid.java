@@ -39,6 +39,6 @@ class Bid {
   }
   
   public String toString() {
-	  return item + "'s current bid is at : $" + amount + " bid by " + bidderName;
+	  return "bid of $" + amount + " by " + bidderName;
   }
 }

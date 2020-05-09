@@ -9,15 +9,16 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
-
+import javafx.event.ActionEvent;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
+
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
@@ -46,7 +47,9 @@ public class Client extends Application{
   private int loginOK = 0;
   TableView<Product> table;
   Runnable setTableInfo;
-
+  private String bidTooLow;
+  Runnable setBidTooLowMsg;
+  Runnable setBidHistory;
 
   public static void main(String[] args) {
 
@@ -97,10 +100,21 @@ public class Client extends Application{
 
   protected void processRequest(String input) {
 	 Gson g = new Gson();
-	 clientProductList = g.fromJson(input, new TypeToken<ArrayList<Product>>() {}.getType()); 
-	 Platform.runLater(() -> {
-		this.setTableInfo.run(); 
-	 });
+	 if(input.contains("bid is too low")) {
+		 bidTooLow = g.fromJson(input, String.class);
+		 Platform.runLater(() -> {
+				this.setBidTooLowMsg.run(); 
+			 });
+	 } else {
+		 clientProductList = g.fromJson(input, new TypeToken<ArrayList<Product>>() {}.getType()); 
+		 Platform.runLater(() -> {
+			this.setTableInfo.run(); 
+			this.setBidHistory.run();	
+
+		
+		 });
+	 }
+
 
 	  
 	 // clientProductList.add(g.fromJson(input, Product.class));
@@ -146,7 +160,7 @@ public class Client extends Application{
 		Scene loginScene = new Scene(loginWindow, 300, 200);
 		
 		Button logoutButton = new Button("Logout");
-		GridPane.setConstraints(logoutButton, 950, 425);
+		GridPane.setConstraints(logoutButton, 1500, 700);
 		logoutButton.setOnAction(e -> window.setScene(loginScene));
 		
 		TextField bidInput = new TextField();
@@ -184,7 +198,17 @@ public class Client extends Application{
 		//		  System.out.println(clientProductList.get(i).highestBidder);
 		//	  }
 			
-			choiceBox.setValue(clientProductList.get(0).product);
+			Label productSelected = new Label("");
+			GridPane.setConstraints(productSelected, 1, 10);
+			
+			String choices[] = new String[5];
+			
+			for(int i = clientProductList.size()-1; i > -1; i--) {
+				choices[i] = clientProductList.get(i).product;
+			}
+			
+		
+			
 			GridPane.setConstraints(choiceBox, 0, 0);
 			
 			
@@ -208,6 +232,14 @@ public class Client extends Application{
 			TableColumn<Product, Integer> timeColumn = new TableColumn<>("Time Remaining");
 			timeColumn.setMinWidth(100);
 			timeColumn.setCellValueFactory(new PropertyValueFactory<>("time"));
+			
+			TableColumn<Product, Boolean> soldColumn = new TableColumn<>("Sold?");
+			soldColumn.setMinWidth(100);
+			soldColumn.setCellValueFactory(new PropertyValueFactory<>("sold"));
+			
+			Text lowBid = new Text();
+			lowBid.setText("");
+			GridPane.setConstraints(lowBid, 0, 10);
 		
 			
 			table = new TableView<>();
@@ -215,17 +247,95 @@ public class Client extends Application{
 				table.setItems(getProduct());			
 			});
 
-			table.getColumns().addAll(productColumn, bidColumn, bidderColumn, buyNowColumn, timeColumn);
+			this.setBidTooLowMsg = new Runnable() {
+				@Override
+				public void run() {
+					lowBid.setText(bidTooLow);
+				}
+			};
+			
+			Label bidHistoryText = new Label("");
+			GridPane.setConstraints(bidHistoryText, 1, 5);
+			
+			choiceBox.setValue(clientProductList.get(0).product);
+			choiceBox.getSelectionModel().selectedIndexProperty().addListener(new ChangeListener<Number>() {
+				public void changed(ObservableValue obs, Number value, Number new_value) {
+					if(new_value.equals(0)) {
+						bidButton.setDisable(false);
+						if(clientProductList.get(0).sold == true) {
+							bidButton.setDisable(true);
+						}
+						productSelected.setText("This will keep you dry on a rainy day," + "\n" + "as long as you make sure not to leave it at home!");
+					}
+					if(new_value.equals(1)) {
+						bidButton.setDisable(false);
+						productSelected.setText("Part of a nutritious everyday breakfast!" + "\n" + "(may or may not be nutritious)");
+						lowBid.setText("");
+					}
+					if(new_value.equals(2)) {
+						bidButton.setDisable(false);
+						productSelected.setText("An overhyped piece of wood!" + "\n" + "Put your stuff on it!");
+						lowBid.setText("");
+					}
+					if(new_value.equals(3)) {
+						bidButton.setDisable(false);
+						productSelected.setText("Warranty not included");
+						lowBid.setText("");
+					}
+					if(new_value.equals(4)) {
+						bidButton.setDisable(false);
+						productSelected.setText("In times like these, no price is too high!");
+						lowBid.setText("");
+					}
+					//productSelected.setText(choices[new_value.intValue()] + " selected");
+				}
+			});
+			
+			this.setBidHistory = new Runnable() {
+				@Override
+				public void run() {
+					for(int a = 0; a < clientProductList.size(); a++) {
+						if(choiceBox.getValue().equals(clientProductList.get(a).getProduct())) {
+							if(clientProductList.get(a).getBidBefore() == true) {
+								for(int x = 0; x < clientProductList.get(a).getBidHistory().size(); x++) {
+									bidHistoryText.setText(clientProductList.get(a).getBidHistory().get(x).toString());
+									System.out.println("fsfjiosdijg");
+								}	
+							}
+
+						}
+					}
+
+
+				}
+			};
+			
+			Button viewBidHistory = new Button("View History");
+			GridPane.setConstraints(viewBidHistory, 0, 2);
+			viewBidHistory.setOnAction(g -> {
+				bidHistoryText.setText(clientProductList.get(0).getBidHistory().get(0).toString());
+			});
+			
+			table.getColumns().addAll(productColumn, bidColumn, bidderColumn, buyNowColumn, timeColumn, soldColumn);
 			GridPane.setConstraints(table, 15, 0);
 			
 			GridPane layout2 = new GridPane();
-			layout2.getChildren().addAll(logoutButton, choiceBox, bidInput, bidButton, table);
-			Scene auctionScene = new Scene(layout2, 1000, 500);
+			layout2.getChildren().addAll(logoutButton, choiceBox, bidInput, bidButton, table, lowBid, productSelected, bidHistoryText, viewBidHistory);
+			Scene auctionScene = new Scene(layout2, 1500, 800);
 			
 			bidButton.setOnAction(f -> {
 				String bp = choiceBox.getValue();
+				Double buyNowPrice = 0.0;
 				if(bidInput.getText() != null) {
 					Bid br = new Bid(bp, Double.parseDouble(bidInput.getText()));
+					for(int z = 0; z < clientProductList.size(); z++) {
+						if(br.getItem().contentEquals(clientProductList.get(z).getProduct())) {
+							 buyNowPrice = clientProductList.get(z).getBuyNow();
+						}
+					}
+					if(br.getAmount() > buyNowPrice) {
+						bidButton.setDisable(true);
+					}
 					br.setName(clientName);
 			         GsonBuilder builder2 = new GsonBuilder();
 			          Gson gson2 = builder2.create();
@@ -242,15 +352,18 @@ public class Client extends Application{
 					bidderColumn.setCellValueFactory(new PropertyValueFactory<>("highestBidder"));
 					bidColumn.setCellValueFactory(new PropertyValueFactory<>("bid"));
 					productColumn.setCellValueFactory(new PropertyValueFactory<>("product"));
+					soldColumn.setCellValueFactory(new PropertyValueFactory<>("sold"));
 					table.setItems(getProduct());
-		        	table.getColumns().addAll(productColumn, bidColumn, bidderColumn, buyNowColumn, timeColumn);
+		        	table.getColumns().addAll(productColumn, bidColumn, bidderColumn, buyNowColumn, timeColumn, soldColumn);
 				}
 			};
-		
 			
+
 			
 			window.setScene(auctionScene);
 		});
+		
+
 
 		
 		
