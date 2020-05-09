@@ -1,9 +1,13 @@
+import java.util.ArrayList;
+
 public class Product{
 	String product;
 	double bid;
 	String highestBidder;
 	double buyNow;
 	int time;
+	boolean sold;
+	ArrayList<Bid> bidHistory;
 	
 	public Product() {
 	    this.product = "";

@@ -45,6 +45,7 @@ public class Client extends Application{
   private static String clientName;
   private int loginOK = 0;
   TableView<Product> table;
+  Runnable setTableInfo;
 
 
   public static void main(String[] args) {
@@ -58,7 +59,7 @@ public class Client extends Application{
     System.out.println("Connecting to... " + socket);
     fromServer = new BufferedReader(new InputStreamReader(socket.getInputStream()));
     toServer = new PrintWriter(socket.getOutputStream());
-
+    
     Thread readerThread = new Thread(new Runnable() {
       @Override
       public void run() {
@@ -95,8 +96,12 @@ public class Client extends Application{
   }
 
   protected void processRequest(String input) {
-	  Gson g = new Gson();
-	  clientProductList = g.fromJson(input, new TypeToken<ArrayList<Product>>() {}.getType());
+	 Gson g = new Gson();
+	 clientProductList = g.fromJson(input, new TypeToken<ArrayList<Product>>() {}.getType()); 
+	 Platform.runLater(() -> {
+		this.setTableInfo.run(); 
+	 });
+
 	  
 	 // clientProductList.add(g.fromJson(input, Product.class));
   }
@@ -151,9 +156,6 @@ public class Client extends Application{
 		Button bidButton = new Button("Place Bid!");
 		GridPane.setConstraints(bidButton, 2, 0);
 		
-	
-		
-		
 		window.setScene(loginScene);
 		window.show();
 		
@@ -206,6 +208,7 @@ public class Client extends Application{
 			TableColumn<Product, Integer> timeColumn = new TableColumn<>("Time Remaining");
 			timeColumn.setMinWidth(100);
 			timeColumn.setCellValueFactory(new PropertyValueFactory<>("time"));
+		
 			
 			table = new TableView<>();
 			Platform.runLater(() -> {
@@ -228,8 +231,23 @@ public class Client extends Application{
 			          Gson gson2 = builder2.create();
 			          sendToServer(gson2.toJson(br));
 				}
-			});
-	
+			});	
+			
+			this.setTableInfo = new Runnable() {
+				@Override
+				public void run() {
+					table.getColumns().clear();
+					timeColumn.setCellValueFactory(new PropertyValueFactory<>("time"));
+					buyNowColumn.setCellValueFactory(new PropertyValueFactory<>("buyNow"));
+					bidderColumn.setCellValueFactory(new PropertyValueFactory<>("highestBidder"));
+					bidColumn.setCellValueFactory(new PropertyValueFactory<>("bid"));
+					productColumn.setCellValueFactory(new PropertyValueFactory<>("product"));
+					table.setItems(getProduct());
+		        	table.getColumns().addAll(productColumn, bidColumn, bidderColumn, buyNowColumn, timeColumn);
+				}
+			};
+		
+			
 			
 			window.setScene(auctionScene);
 		});
@@ -256,6 +274,8 @@ public class Client extends Application{
 	  }
 	  return productList;
   }
+  
+
 
 
 }
