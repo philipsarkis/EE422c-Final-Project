@@ -1,3 +1,5 @@
+package final_exam;
+
 import java.util.ArrayList;
 
 public class Product{
@@ -9,6 +11,7 @@ public class Product{
 	boolean sold;
 	ArrayList<Bid> bidHistory = new ArrayList<Bid>();
 	boolean bidBefore;
+	String description;
 	
 	public Product() {
 	    this.product = "";
@@ -19,9 +22,10 @@ public class Product{
 	    this.sold = false;
 	    this.bidBefore = false;
 	    this.bidHistory = new ArrayList<Bid>();
+	    this.description = "";
 	  }
 
-	  public Product(String input, double number, double buyPrice, int timer) {
+	  public Product(String input, double number, double buyPrice, int timer, String desc) {
 	    this.product = input;
 	    this.bid = number;
 	    this.buyNow = buyPrice;
@@ -30,6 +34,7 @@ public class Product{
 	    this.sold = false;
 	    this.bidBefore = false;
 	    this.bidHistory = new ArrayList<Bid>();
+	    this.description = desc;
 	    
 	  }
 	  
@@ -54,6 +59,14 @@ public class Product{
 	  
 	  public void setBuyNow(double instaBuy) {
 		 buyNow = instaBuy;
+	  }
+	  
+	  public void setDescription(String desc) {
+		  description = desc;
+	  }
+	  
+	  public String getDescription() {
+		  return description;
 	  }
 	  
 	  public void setTime(int timer) {

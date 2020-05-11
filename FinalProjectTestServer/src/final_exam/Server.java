@@ -1,3 +1,4 @@
+package final_exam;
 import java.io.File;
 
 import java.util.Timer;
@@ -29,9 +30,9 @@ class Server extends Observable {
         while(scan.hasNextLine())
         {
             String string = scan.nextLine();
-            String[] inputs = new String[3];
+            String[] inputs = new String[4];
             inputs = string.split(",");
-            productList.add(new Product(inputs[0], Double.parseDouble(inputs[1]), Double.parseDouble(inputs[2]), Integer.parseInt(inputs[3])));
+            productList.add(new Product(inputs[0], Double.parseDouble(inputs[1]), Double.parseDouble(inputs[2]), Integer.parseInt(inputs[3]), inputs[4]));
             
         }
         interval = productList.get(0).getTime();
@@ -46,7 +47,6 @@ class Server extends Observable {
 	            for(int i = 0; i < productList.size(); i++) {
 	            	productList.get(i).setTime(interval);
 	            }
-	            System.out.println(interval);
 	    	      server.setChanged();
 	    	      server.notifyObservers("ticktock " + interval);
 
@@ -109,7 +109,7 @@ class Server extends Observable {
     }
     else {
     	try {
-    		System.out.println("welcome, " + input);
+    		System.out.println("Welcome, " + input);
     		  
        		j = productList;
        		for(int i = 0; i < j.size(); i++) {
