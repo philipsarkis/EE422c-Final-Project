@@ -1,6 +1,8 @@
 
 import java.util.Scanner;
+
 import com.google.gson.reflect.TypeToken;
+import javafx.scene.media.MediaPlayer;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -34,6 +36,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.RowConstraints;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.media.Media;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
@@ -50,6 +53,10 @@ public class Client extends Application{
   private String bidTooLow;
   Runnable setBidTooLowMsg;
   Runnable setBidHistory;
+  int timeLeft;
+  boolean runOutOfTime = false;
+  Button bidButton = new Button("Place Bid!");
+  boolean launchTimer = false;
 
   public static void main(String[] args) {
 
@@ -100,18 +107,63 @@ public class Client extends Application{
 
   protected void processRequest(String input) {
 	 Gson g = new Gson();
+	 
 	 if(input.contains("bid is too low")) {
 		 bidTooLow = g.fromJson(input, String.class);
 		 Platform.runLater(() -> {
 				this.setBidTooLowMsg.run(); 
 			 });
+	 } else if(input.contains("ticktock")) {
+		 launchTimer = true;
+		 String[] numbers = input.split(" ");
+		 timeLeft = Integer.parseInt(numbers[1]);
+
+		 if(loginOK) {
+			 for(int i = 0; i < clientProductList.size(); i++) {
+				 clientProductList.get(i).setTime(timeLeft);
+			 }
+			 if(timeLeft == 0) {
+				 runOutOfTime = true;
+				 for(int r = 0; r < clientProductList.size(); r++) {
+					 clientProductList.get(r).setSold(true);
+					 if(clientProductList.get(r).getHighestBidder().contentEquals("No one Yet")) {
+						 System.out.println(clientProductList.get(r).getHighestBidder());
+						 clientProductList.get(r).setSold(false);
+					 }
+				 }
+				 bidButton.setDisable(true);
+			 }
+			 Platform.runLater(() -> {
+				 System.out.println(clientProductList.get(0).getTime());
+					this.setTableInfo.run(); 
+					//this.setBidHistory.run();	
+				 });  
+		 }
+		 
 	 } else {
 		 if(loginOK) {
+			 if(!launchTimer) {
+				 runOutOfTime = true;
+			 }
 			 clientProductList = g.fromJson(input, new TypeToken<ArrayList<Product>>() {}.getType()); 
-			 Platform.runLater(() -> {
-				this.setTableInfo.run(); 
-				//this.setBidHistory.run();	
-			 }); 
+			 if(!runOutOfTime) {
+				 Platform.runLater(() -> {
+					 System.out.println("testkappers1234688");
+						this.setTableInfo.run(); 
+						//this.setBidHistory.run();	
+					 });  
+			 } else {
+				 for(int r = 0; r < clientProductList.size(); r++) {
+					 System.out.println("testkappers1234");
+					 clientProductList.get(r).setSold(true);
+					 bidButton.setDisable(true);
+					 if(clientProductList.get(r).getHighestBidder().contentEquals("No one Yet")) {
+						 System.out.println(clientProductList.get(r).getHighestBidder());
+						 clientProductList.get(r).setSold(false);
+					 }
+				 }
+			 }
+
 		 }
 	 }
 
@@ -133,7 +185,15 @@ public class Client extends Application{
 	    } catch (Exception e) {
 	      e.printStackTrace();
 	    }
-		
+	  	if(runOutOfTime) {
+	  		bidButton.setDisable(true);
+	  		System.out.println("poop");
+	  		for(int t = 0; t < clientProductList.size(); t++) {
+	  			System.out.println("poop");
+	  			clientProductList.get(t).setSold(true);
+	  		}
+	  	}
+
 		//Create a GridPane for the control panel and adjust its constraints
 	  	Stage window = primaryStage;
 	  	window.setTitle("EHills");
@@ -160,14 +220,14 @@ public class Client extends Application{
 		Scene loginScene = new Scene(loginWindow, 300, 200);
 		
 		Button logoutButton = new Button("Logout");
-		GridPane.setConstraints(logoutButton, 1500, 700);
+		GridPane.setConstraints(logoutButton, 18, 18);
 		logoutButton.setOnAction(e -> window.setScene(loginScene));
 		
 		TextField bidInput = new TextField();
 		loginInput.setPromptText("Enter Bid Amount");
 		GridPane.setConstraints(bidInput, 1, 0);
 		
-		Button bidButton = new Button("Place Bid!");
+		
 		GridPane.setConstraints(bidButton, 2, 0);
 		
 		window.setScene(loginScene);
@@ -240,7 +300,7 @@ public class Client extends Application{
 			
 			Text lowBid = new Text();
 			lowBid.setText("");
-			GridPane.setConstraints(lowBid, 0, 10);
+			GridPane.setConstraints(lowBid, 1, 1);
 		
 			
 			table = new TableView<>();
@@ -259,11 +319,19 @@ public class Client extends Application{
 			GridPane.setConstraints(bidHistoryText, 1, 5);
 			
 			choiceBox.setValue(clientProductList.get(0).product);
+			productSelected.setText("This will keep you dry on a rainy day," + "\n" + "as long as you make sure not to leave it at home!");
 			choiceBox.getSelectionModel().selectedIndexProperty().addListener(new ChangeListener<Number>() {
 				public void changed(ObservableValue obs, Number value, Number new_value) {
 					if(new_value.equals(0)) {
 						bidHistoryText.setText("");
-						bidButton.setDisable(false);
+						if(!runOutOfTime) {
+							bidButton.setDisable(false);
+						} else {
+							bidButton.setDisable(true);
+							if(clientProductList.get(0).getSold()) {
+								bidHistoryText.setText(bidHistoryText.getText() + "Sold!!!");
+							}
+						}
 						if(clientProductList.get(0).sold == true) 
 							bidButton.setDisable(true);
 						productSelected.setText("This will keep you dry on a rainy day," + "\n" + "as long as you make sure not to leave it at home!");
@@ -271,7 +339,14 @@ public class Client extends Application{
 					}
 					if(new_value.equals(1)) {
 						bidHistoryText.setText("");
-						bidButton.setDisable(false);
+						if(!runOutOfTime) {
+							bidButton.setDisable(false);
+						} else {
+							bidButton.setDisable(true);
+							if(clientProductList.get(1).getSold()) {
+								bidHistoryText.setText(bidHistoryText.getText() + "Sold!!!");
+							}
+						}
 						if(clientProductList.get(1).sold == true) 
 							bidButton.setDisable(true);
 						productSelected.setText("Part of a nutritious everyday breakfast!" + "\n" + "(may or may not be nutritious)");
@@ -279,7 +354,14 @@ public class Client extends Application{
 					}
 					if(new_value.equals(2)) {
 						bidHistoryText.setText("");
-						bidButton.setDisable(false);
+						if(!runOutOfTime) {
+							bidButton.setDisable(false);
+						} else {
+							bidButton.setDisable(true);
+							if(clientProductList.get(2).getSold()) {
+								bidHistoryText.setText(bidHistoryText.getText() + "Sold!!!");
+							}
+						}
 						if(clientProductList.get(2).sold == true) 
 							bidButton.setDisable(true);
 						productSelected.setText("An overhyped piece of wood!" + "\n" + "Put your stuff on it!");
@@ -287,7 +369,14 @@ public class Client extends Application{
 					}
 					if(new_value.equals(3)) {
 						bidHistoryText.setText("");
-						bidButton.setDisable(false);
+						if(!runOutOfTime) {
+							bidButton.setDisable(false);
+						} else {
+							bidButton.setDisable(true);
+							if(clientProductList.get(3).getSold()) {
+								bidHistoryText.setText(bidHistoryText.getText() + "Sold!!!");
+							}
+						}
 						if(clientProductList.get(3).sold == true) 
 							bidButton.setDisable(true);
 						productSelected.setText("Warranty not included");
@@ -295,7 +384,14 @@ public class Client extends Application{
 					}
 					if(new_value.equals(4)) {
 						bidHistoryText.setText("");
-						bidButton.setDisable(false);
+						if(!runOutOfTime) {
+							bidButton.setDisable(false);
+						} else {
+							bidButton.setDisable(true);
+							if(clientProductList.get(4).getSold()) {
+								bidHistoryText.setText(bidHistoryText.getText() + "Sold!!!");
+							}
+						}
 						if(clientProductList.get(4).sold == true) 
 							bidButton.setDisable(true);
 						productSelected.setText("In times like these, no price is too high!");
@@ -305,7 +401,7 @@ public class Client extends Application{
 				}
 			});
 			
-			this.setBidHistory = new Runnable() {
+/*			this.setBidHistory = new Runnable() {
 				@Override
 				public void run() {
 					String s = new String();
@@ -322,11 +418,12 @@ public class Client extends Application{
 
 
 				}
-			};
+			};*/
 			
 			Button viewBidHistory = new Button("View History");
 			GridPane.setConstraints(viewBidHistory, 0, 2);
 			viewBidHistory.setOnAction(g -> {
+				int xd = 0;
 				String t = new String();
 				for(int a = 0; a < clientProductList.size(); a++) {
 					if(choiceBox.getValue().equals(clientProductList.get(a).getProduct())) {
@@ -335,6 +432,15 @@ public class Client extends Application{
 								t = t + clientProductList.get(a).getBidHistory().get(x).toString() + "\n";
 								if(clientProductList.get(a).getBidHistory().get(x).getAmount() > clientProductList.get(a).getBuyNow()) {
 									t = t + "Sold!!!" + "\n";
+								}
+								xd = a;
+
+							}
+							if(runOutOfTime) {
+								if(!(clientProductList.get(xd).getHighestBidder().contains("No one Yet"))) {
+									if(!(t.contains("Sold!!!"))) {
+											t = t + "Sold!!!" + "\n";	
+									}	
 								}
 							}
 						}
@@ -348,27 +454,32 @@ public class Client extends Application{
 			
 			GridPane layout2 = new GridPane();
 			layout2.getChildren().addAll(logoutButton, choiceBox, bidInput, bidButton, table, lowBid, productSelected, bidHistoryText, viewBidHistory);
-			Scene auctionScene = new Scene(layout2, 1500, 800);
-			
-			bidButton.setOnAction(f -> {
-				String bp = choiceBox.getValue();
-				Double buyNowPrice = 0.0;
-				if(bidInput.getText() != null) {
-					Bid br = new Bid(bp, Double.parseDouble(bidInput.getText()));
-					for(int z = 0; z < clientProductList.size(); z++) {
-						if(br.getItem().contentEquals(clientProductList.get(z).getProduct())) {
-							 buyNowPrice = clientProductList.get(z).getBuyNow();
+			Scene auctionScene = new Scene(layout2, 1300, 600);
+				bidButton.setOnAction(f -> {
+					System.out.println(clientProductList.get(0).getTime());
+					String cashNoise = "cashSound.wav";
+					Media sound = new Media(new File(cashNoise).toURI().toString());
+				 MediaPlayer mediaPlayer = new MediaPlayer(sound);
+					mediaPlayer.play();
+					String bp = choiceBox.getValue();
+					Double buyNowPrice = 0.0;
+					if(bidInput.getText() != null) {
+						Bid br = new Bid(bp, Double.parseDouble(bidInput.getText()));
+						for(int z = 0; z < clientProductList.size(); z++) {
+							if(br.getItem().contentEquals(clientProductList.get(z).getProduct())) {
+								 buyNowPrice = clientProductList.get(z).getBuyNow();
+							}
 						}
+						if(br.getAmount() > buyNowPrice) {
+							bidButton.setDisable(true);
+						}
+						br.setName(clientName);
+				         GsonBuilder builder2 = new GsonBuilder();
+				          Gson gson2 = builder2.create();
+				          sendToServer(gson2.toJson(br));
 					}
-					if(br.getAmount() > buyNowPrice) {
-						bidButton.setDisable(true);
-					}
-					br.setName(clientName);
-			         GsonBuilder builder2 = new GsonBuilder();
-			          Gson gson2 = builder2.create();
-			          sendToServer(gson2.toJson(br));
-				}
-			});	
+				});	
+
 			
 			this.setTableInfo = new Runnable() {
 				@Override

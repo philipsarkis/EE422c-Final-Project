@@ -13,7 +13,7 @@ public class Product{
 	public Product() {
 	    this.product = "";
 	    this.bid = 0.0;
-	    this.highestBidder = "";
+	    this.highestBidder = "No one Yet";
 	    this.buyNow = 0;
 	    this.time = 100;
 	    this.sold = false;

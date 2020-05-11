@@ -1,4 +1,7 @@
 import java.io.File;
+
+import java.util.Timer;
+import java.util.TimerTask;
 import java.net.ServerSocket;
 import com.google.gson.reflect.TypeToken;
 import java.net.Socket;
@@ -9,10 +12,14 @@ import java.util.Scanner;
 import com.google.gson.Gson;
 
 class Server extends Observable {
+	static int interval;
+	static Timer timer;
 	private ArrayList<Product> productList = new ArrayList<Product>();
+	static Server server;
 
   public static void main(String[] args) {
-    new Server().runServer();
+	  server = new Server();
+    server.runServer();
   }
 
   private void runServer() {
@@ -27,6 +34,24 @@ class Server extends Observable {
             productList.add(new Product(inputs[0], Double.parseDouble(inputs[1]), Double.parseDouble(inputs[2]), Integer.parseInt(inputs[3])));
             
         }
+        interval = productList.get(0).getTime();
+        int delay = 1000;
+	    int period = 1000;
+	    timer = new Timer();
+	    System.out.println(interval);
+	    timer.scheduleAtFixedRate(new TimerTask() {
+
+	        public void run() {
+	        	setInterval();
+	            for(int i = 0; i < productList.size(); i++) {
+	            	productList.get(i).setTime(interval);
+	            }
+	            System.out.println(interval);
+	    	      server.setChanged();
+	    	      server.notifyObservers("ticktock " + interval);
+
+	        }
+	    }, delay, period);	  
       setUpNetworking();
     } catch (Exception e) {
       e.printStackTrace();
@@ -105,4 +130,10 @@ class Server extends Observable {
     
   }
 
+  
+  private static final int setInterval() {
+	    if (interval == 1)
+	        timer.cancel();
+	    return --interval;
+	}
 }
