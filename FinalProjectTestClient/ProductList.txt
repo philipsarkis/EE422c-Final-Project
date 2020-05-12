@@ -1,5 +1,0 @@
-Umbrella,5.0,30.0,100,"This will keep you dry on a rainy day!"
-Cereal,1.0,15.0,100,"Part of a nutritious everyday breakfast!"
-Desk,25.0,300.0,100,"Put your stuff on it!"
-Laptop,200.0,2000.0,100,"Warranty not included"
-Sanitizer,5.0,10000.0,100,"Kills 99.9% of COVID19!"

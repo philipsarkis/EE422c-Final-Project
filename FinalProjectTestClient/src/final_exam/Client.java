@@ -45,6 +45,7 @@ public class Client extends Application{
   private static String host = "127.0.0.1";
   private BufferedReader fromServer;
   private PrintWriter toServer;
+  String username;
   private Scanner consoleInput = new Scanner(System.in);
   private static String clientName;
   private boolean loginOK = false;
@@ -54,12 +55,14 @@ public class Client extends Application{
   Runnable setBidTooLowMsg;
   Runnable setBidHistory;
   int timeLeft;
+  boolean makeNoise = false;
+  String lastBidder;
+  double lastBid;
   boolean runOutOfTime = false;
   Button bidButton = new Button("Place Bid!");
   boolean launchTimer = false;
 
   public static void main(String[] args) {
-
     launch(args);
   }
 
@@ -107,12 +110,18 @@ public class Client extends Application{
 
   protected void processRequest(String input) {
 	 Gson g = new Gson();
+	 Gson g1 = new Gson();
 	 
 	 if(input.contains("bid is too low")) {
-		 bidTooLow = g.fromJson(input, String.class);
-		 Platform.runLater(() -> {
-				this.setBidTooLowMsg.run(); 
-			 });
+		 String msgString = g1.fromJson(input, String.class);
+		 String[] msgLow = msgString.split(",");
+		 if(msgLow[1].contains(clientName)) {
+			 bidTooLow = msgLow[0];
+			 Platform.runLater(() -> {
+					this.setBidTooLowMsg.run(); 
+				 });
+		 }
+		 
 	 } else if(input.contains("ticktock")) {
 		 launchTimer = true;
 		 String[] numbers = input.split(" ");
@@ -220,6 +229,7 @@ public class Client extends Application{
 		Button logoutButton = new Button("Logout");
 		GridPane.setConstraints(logoutButton, 18, 18);
 		logoutButton.setOnAction(e -> {
+			window.setTitle("EHills");
 			bidInput.setText("");
 			window.setScene(loginScene);
 			loginInput.setText("");
@@ -236,6 +246,7 @@ public class Client extends Application{
 		login.setOnAction(e -> {
 			loginOK = true;
 			String s = loginInput.getText();
+			window.setTitle("EHills - welcome, " + s);
 			GsonBuilder builder1 = new GsonBuilder();
 	        Gson gson1 = builder1.create();
 	        sendToServer(gson1.toJson(s));
@@ -252,12 +263,6 @@ public class Client extends Application{
 			for(int i = 0; i < clientProductList.size(); i++) {
 				choiceBox.getItems().add(clientProductList.get(i).product);
 			}
-			
-		//	for(int i = 0; i < clientProductList.size(); i++) {
-		//		  System.out.println(clientProductList.get(i).product);
-		//		  System.out.println(clientProductList.get(i).bid);
-		//		  System.out.println(clientProductList.get(i).highestBidder);
-		//	  }
 			
 			Label productSelected = new Label("");
 			GridPane.setConstraints(productSelected, 1, 2);
@@ -371,15 +376,19 @@ public class Client extends Application{
 							for(int x = 0; x < clientProductList.get(a).getBidHistory().size(); x++) {
 								t = t + clientProductList.get(a).getBidHistory().get(x).toString() + "\n";
 								if(clientProductList.get(a).getBidHistory().get(x).getAmount() > clientProductList.get(a).getBuyNow()) {
-									t = t + "Sold!!!" + "\n";
+									lastBid = clientProductList.get(a).getBid();
+									lastBidder = clientProductList.get(a).getHighestBidder();
+									t = t + "Sold! To " + lastBidder + " for $" + lastBid;
 								}
 								xd = a;
 
 							}
 							if(runOutOfTime) {
 								if(!(clientProductList.get(xd).getHighestBidder().contains("No one Yet"))) {
-									if(!(t.contains("Sold!!!"))) {
-											t = t + "Sold!!!" + "\n";	
+									if(!(t.contains("Sold!"))) {
+										lastBid = clientProductList.get(xd).getBid();
+										lastBidder = clientProductList.get(xd).getHighestBidder();
+										t = t + "Sold to " + lastBidder + " for $" + lastBid;
 									}	
 								}
 							}
@@ -396,13 +405,14 @@ public class Client extends Application{
 			layout2.getChildren().addAll(logoutButton, choiceBox, bidInput, bidButton, table, lowBid, productSelected, bidHistoryText, viewBidHistory);
 			Scene auctionScene = new Scene(layout2, 1400, 650);
 				bidButton.setOnAction(f -> {
+					 String cashNoise = "cashSound.wav";
+						Media sound = new Media(new File(cashNoise).toURI().toString());
+					 MediaPlayer mediaPlayer = new MediaPlayer(sound);
+ 
 					//System.out.println(clientProductList.get(0).getTime());
-					String cashNoise = "cashSound.wav";
-					Media sound = new Media(new File(cashNoise).toURI().toString());
-				 MediaPlayer mediaPlayer = new MediaPlayer(sound);
-					mediaPlayer.play();
 					String bp = choiceBox.getValue();
 					Double buyNowPrice = 0.0;
+					Double minBidPrice = 0.0;
 					if(bidInput.getText() != null) {
 						try {
 							Double number = Double.parseDouble(bidInput.getText());
@@ -414,6 +424,14 @@ public class Client extends Application{
 							}
 							if(br.getAmount() > buyNowPrice) {
 								bidButton.setDisable(true);
+							}
+							for(int z = 0; z < clientProductList.size(); z++) {
+								if(br.getItem().contentEquals(clientProductList.get(z).getProduct())) {
+									 minBidPrice = clientProductList.get(z).getBid();
+								}
+							}
+							if(br.getAmount() > minBidPrice) {
+								mediaPlayer.play();
 							}
 							br.setName(clientName);
 							lowBid.setText("");
@@ -486,80 +504,3 @@ public class Client extends Application{
 
 
 }
-
-/*	if(new_value.equals(0)) {
-bidHistoryText.setText("");
-if(!runOutOfTime) {
-	bidButton.setDisable(false);
-} else {
-	bidButton.setDisable(true);
-	if(clientProductList.get(0).getSold()) {
-		bidHistoryText.setText(bidHistoryText.getText() + "Sold!!!");
-	}
-}
-if(clientProductList.get(0).sold == true) 
-	bidButton.setDisable(true);
-productSelected.setText(clientProductList.get(0).getDescription());
-lowBid.setText("");
-}
-if(new_value.equals(1)) {
-bidHistoryText.setText("");
-if(!runOutOfTime) {
-	bidButton.setDisable(false);
-} else {
-	bidButton.setDisable(true);
-	if(clientProductList.get(1).getSold()) {
-		bidHistoryText.setText(bidHistoryText.getText() + "Sold!!!");
-	}
-}
-if(clientProductList.get(1).sold == true) 
-	bidButton.setDisable(true);
-productSelected.setText(clientProductList.get(1).getDescription());
-lowBid.setText("");
-}
-if(new_value.equals(2)) {
-bidHistoryText.setText("");
-if(!runOutOfTime) {
-	bidButton.setDisable(false);
-} else {
-	bidButton.setDisable(true);
-	if(clientProductList.get(2).getSold()) {
-		bidHistoryText.setText(bidHistoryText.getText() + "Sold!!!");
-	}
-}
-if(clientProductList.get(2).sold == true) 
-	bidButton.setDisable(true);
-productSelected.setText(clientProductList.get(2).getDescription());
-lowBid.setText("");
-}
-if(new_value.equals(3)) {
-bidHistoryText.setText("");
-if(!runOutOfTime) {
-	bidButton.setDisable(false);
-} else {
-	bidButton.setDisable(true);
-	if(clientProductList.get(3).getSold()) {
-		bidHistoryText.setText(bidHistoryText.getText() + "Sold!!!");
-	}
-}
-if(clientProductList.get(3).sold == true) 
-	bidButton.setDisable(true);
-productSelected.setText(clientProductList.get(3).getDescription());
-lowBid.setText("");
-}
-if(new_value.equals(4)) {
-bidHistoryText.setText("");
-if(!runOutOfTime) {
-	bidButton.setDisable(false);
-} else {
-	bidButton.setDisable(true);
-	if(clientProductList.get(4).getSold()) {
-		bidHistoryText.setText(bidHistoryText.getText() + "Sold!!!");
-	}
-}
-if(clientProductList.get(4).sold == true) 
-	bidButton.setDisable(true);
-productSelected.setText(clientProductList.get(4).getDescription());
-lowBid.setText("");
-}*/
-//productSelected.setText(choices[new_value.intValue()] + " selected");

@@ -13,6 +13,7 @@ import java.util.Scanner;
 import com.google.gson.Gson;
 
 class Server extends Observable {
+	static Object lock = new Object();
 	static int interval;
 	static Timer timer;
 	private ArrayList<Product> productList = new ArrayList<Product>();
@@ -39,7 +40,6 @@ class Server extends Observable {
         int delay = 1000;
 	    int period = 1000;
 	    timer = new Timer();
-	    System.out.println(interval);
 	    timer.scheduleAtFixedRate(new TimerTask() {
 
 	        public void run() {
@@ -75,59 +75,61 @@ class Server extends Observable {
   }
 
   protected void processRequest(String input) {
-    String output = "Error";
-    ArrayList<Product> j = new ArrayList<Product>();
-    Gson gson = new Gson();
-    if(input.contains("amount")) {
-    	Bid bid = gson.fromJson(input, Bid.class);
-    	try {
-    		for(int i = 0; i < productList.size(); i++) {
-    			if(bid.item.equals(productList.get(i).product)) {
-    				if(bid.amount > productList.get(i).bid) {
-    					productList.get(i).setBid(bid.amount);
-    					productList.get(i).setBidHistory(bid);
-    					productList.get(i).setBidder(bid.bidderName);
-    					productList.get(i).setBidBefore(true);
-    					if(bid.amount >= productList.get(i).buyNow) {
-        					productList.get(i).setSold(true);
-    					}
-    	    			j = productList;
-    	    			output = gson.toJson(j);
-    				}
-    				else {
-    					output = gson.toJson("Your bid is too low!");
-    				}
-    			}
+	  synchronized(lock) {
+		  String output = "Error";
+		    ArrayList<Product> j = new ArrayList<Product>();
+		    Gson gson = new Gson();
+		    if(input.contains("amount")) {
+		    	Bid bid = gson.fromJson(input, Bid.class);
+		    	try {
+		    		for(int i = 0; i < productList.size(); i++) {
+		    			if(bid.item.equals(productList.get(i).product)) {
+		    				if(bid.amount > productList.get(i).bid) {
+		    					productList.get(i).setBid(bid.amount);
+		    					productList.get(i).setBidHistory(bid);
+		    					productList.get(i).setBidder(bid.bidderName);
+		    					productList.get(i).setBidBefore(true);
+		    					if(bid.amount >= productList.get(i).buyNow) {
+		        					productList.get(i).setSold(true);
+		    					}
+		    	    			j = productList;
+		    	    			output = gson.toJson(j);
+		    				}
+		    				else {
+		    					output = gson.toJson("Your bid is too low!"+ "," + bid.getName());
+		    				}
+		    			}
 
-    			
-    	      }
-    	      this.setChanged();
-    	      this.notifyObservers(output);
-    	    } catch (Exception e) {
-    	      e.printStackTrace();
-    	    }
-    }
-    else {
-    	try {
-    		System.out.println("Welcome, " + input);
-    		  
-       		j = productList;
-       		for(int i = 0; i < j.size(); i++) {
-  			  System.out.println(j.get(i).product);
-  			  System.out.println(j.get(i).bid);
-  			  System.out.println(j.get(i).highestBidder);
-  		  }
-       		
-       		j = productList;
-			output = gson.toJson(j);
-			
-    		this.setChanged();
-          	this.notifyObservers(output);
-    	    } catch (Exception e) {
-    	      e.printStackTrace();
-    	    }
-    }
-    
+		    			
+		    	      }
+		    	      this.setChanged();
+		    	      this.notifyObservers(output);
+		    	    } catch (Exception e) {
+		    	      e.printStackTrace();
+		    	    }
+		    }
+		    else {
+		    	try {
+		    		System.out.println("Welcome, " + input);
+		    		  
+		       		j = productList;
+		       		for(int i = 0; i < j.size(); i++) {
+		  			  System.out.println(j.get(i).product);
+		  			  System.out.println(j.get(i).bid);
+		  			  System.out.println(j.get(i).highestBidder);
+		  		  }
+		       		
+		       		j = productList;
+					output = gson.toJson(j);
+					
+		    		this.setChanged();
+		          	this.notifyObservers(output);
+		    	    } catch (Exception e) {
+		    	      e.printStackTrace();
+		    	    }
+		    }
+	  }
+		
   }
 
   
